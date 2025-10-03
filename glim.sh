@@ -1,7 +1,11 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # BASH. It's what I know best, sorry.
 #
+
+bios="/nix/store/gsck1757j9l71j8qx5vfk73qmdrk17f6-grub-2.12/lib/grub/i386-pc/"
+efi="/nix/store/847dd8w20yc6gk227c1xapyhyqg4iigs-grub-2.12/lib/grub/x86_64-efi/"
+efi_install="/nix/store/847dd8w20yc6gk227c1xapyhyqg4iigs-grub-2.12/bin/grub-install"
 
 # Check that we are *NOT* running as root
 if [[ `id -u` -eq 0 ]]; then
@@ -54,10 +58,10 @@ if [[ ! -b "$USBDEV" ]]; then
   exit 1
 fi
 echo "Found block device where to install GRUB2 : ${USBDEV}"
-if [[ `ls -1 ${USBDEV}* | wc -l` -ne 2 ]]; then
-  echo "ERROR: ${USBDEV1} isn't the only partition on ${USBDEV}"
-  exit 1
-fi
+# if [[ `ls -1 ${USBDEV}* | wc -l` -ne 2 ]]; then
+#   echo "ERROR: ${USBDEV1} isn't the only partition on ${USBDEV}"
+#   exit 1
+# fi
 
 # Sanity check : our partition is mounted
 if ! grep -q -w ${USBDEV1} /proc/mounts; then
@@ -73,10 +77,10 @@ echo "Found mount point for filesystem : ${USBMNT}"
 
 BIOS=true
 # Check BIOS support
-if [[ -d /usr/lib/grub/i386-pc ]]; then
+if [[ -d $bios ]]; then
   BIOS=true
 else
-  echo "WARNING: no /usr/lib/grub/i386-pc dir. Skipping Grub BIOS support"
+  echo "WARNING: no $bios dir. Skipping Grub BIOS support"
   BIOS=false
   EFI=true
 fi
@@ -98,12 +102,12 @@ if [[ $BIOS == true ]]; then
 fi
 
 # Sanity check : for EFI, an additional package might be missing
-if [[ $EFI == true && ! -d /usr/lib/grub/x86_64-efi ]]; then
+if [[ $EFI == true && ! -d $efi ]]; then
   if [[ $BIOS == false ]]; then
     echo "ERROR: neither support for BIOS or EFI was found"
     exit 1
   else
-    echo "WARNING: no /usr/lib/grub/x86_64-efi dir (grub2-efi-x64-modules rpm or grub-efi-amd64-bin deb missing?)"
+    echo "WARNING: no $efi dir (grub2-efi-x64-modules rpm or grub-efi-amd64-bin deb missing?)"
   fi
 fi
 
@@ -133,10 +137,10 @@ if [[ $BIOS == true ]]; then
 fi
 if [[ $EFI == true ]]; then
   GRUB_TARGET="--target=x86_64-efi --efi-directory=${USBMNT} --removable"
-  echo "Running ${GRUB2_INSTALL} ${GRUB_TARGET} --boot-directory=${USBMNT}/boot ${USBDEV} (with sudo) ..."
-  sudo ${GRUB2_INSTALL} ${GRUB_TARGET} --boot-directory=${USBMNT}/boot ${USBDEV}
+  echo "Running ${efi_install} ${GRUB_TARGET} --boot-directory=${USBMNT}/boot ${USBDEV} (with sudo) ..."
+  sudo ${efi_install} ${GRUB_TARGET} --boot-directory=${USBMNT}/boot ${USBDEV}
   if [[ $? -ne 0 ]]; then
-    echo "ERROR: ${GRUB2_INSTALL} returned with an error exit status."
+    echo "ERROR: ${efi_install} returned with an error exit status."
     exit 1
   fi
 fi
